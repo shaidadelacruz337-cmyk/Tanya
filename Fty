@@ -1,0 +1,206 @@
+import 'package:flutter/material.dart';
+import 'package:math_expressions/math_expressions.dart'; // Пакет для безопасного вычисления строк
+
+void main() {
+  // Убедитесь, что вы добавили пакет math_expressions в pubspec.yaml:
+  // dependencies:
+  //   math_expressions: ^2.4.0
+  runApp(CalculatorApp());
+}
+
+class CalculatorApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Simple Calculator',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.blueGrey,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      home: SimpleCalculator(),
+    );
+  }
+}
+
+class SimpleCalculator extends StatefulWidget {
+  @override
+  _SimpleCalculatorState createState() => _SimpleCalculatorState();
+}
+
+class _SimpleCalculatorState extends State<SimpleCalculator> {
+  String _expression = ''; // Текущее выражение для отображения
+  String _result = '0';      // Результат вычислений
+
+  // Карта цветов и стилей для кнопок
+  static const Color _buttonColor = Color(0xFF333333);
+  static const Color _operatorColor = Color(0xFFFF9800);
+  static const Color _clearColor = Color(0xFFa5a5a5);
+
+  // --- ЛОГИКА КАЛЬКУЛЯТОРА ---
+
+  void _onButtonPressed(String buttonText) {
+    setState(() {
+      if (buttonText == 'C') {
+        // Очистка
+        _expression = '';
+        _result = '0';
+      } else if (buttonText == 'DEL') {
+        // Удаление последнего символа
+        if (_expression.isNotEmpty) {
+          _expression = _expression.substring(0, _expression.length - 1);
+        }
+      } else if (buttonText == '=') {
+        _calculateResult();
+      } else {
+        // Добавление символа к выражению
+        _expression += buttonText;
+      }
+    });
+  }
+
+  void _calculateResult() {
+    try {
+      // 1. Подготовка выражения: замена X на *
+      String finalExpression = _expression.replaceAll('x', '*');
+      
+      // 2. Парсинг выражения
+      Parser p = Parser();
+      Expression exp = p.parse(finalExpression);
+      
+      // 3. Вычисление
+      ContextModel cm = ContextModel();
+      double evalResult = exp.evaluate(EvaluationType.REAL, cm);
+      
+      // 4. Форматирование результата
+      _result = evalResult.toString();
+
+      // Убираем ".0" если результат — целое число
+      if (_result.endsWith('.0')) {
+        _result = _result.substring(0, _result.length - 2);
+      }
+      
+    } catch (e) {
+      _result = 'Ошибка';
+    }
+  }
+
+  // --- UI (ПОЛЬЗОВАТЕЛЬСКИЙ ИНТЕРФЕЙС) ---
+
+  // Виджет для кнопки калькулятора
+  Widget _buildButton(String buttonText, Color color, {int flex = 1}) {
+    return Expanded(
+      flex: flex,
+      child: Padding(
+        padding: const EdgeInsets.all(6.0),
+        child: MaterialButton(
+          padding: EdgeInsets.all(20.0),
+          color: color,
+          shape: CircleBorder(),
+          onPressed: () => _onButtonPressed(buttonText),
+          child: Text(
+            buttonText,
+            style: TextStyle(
+              fontSize: 28.0,
+              fontWeight: FontWeight.bold,
+              color: (color == _clearColor) ? Colors.black : Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Column(
+          children: <Widget>[
+            // --- ЭКРАН РЕЗУЛЬТАТОВ ---
+            Expanded(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                alignment: Alignment.bottomRight,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Текущее выражение (ввод)
+                    Text(
+                      _expression,
+                      style: TextStyle(fontSize: 48.0, color: Colors.white70),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 10),
+                    // Результат
+                    Text(
+                      _result,
+                      style: TextStyle(fontSize: 64.0, color: Colors.white),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // --- КЛАВИАТУРА ---
+            Divider(height: 1, color: Colors.white24),
+            
+            Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    _buildButton('C', _clearColor),
+                    _buildButton('DEL', _clearColor),
+                    _buildButton('%', _clearColor),
+                    _buildButton('/', _operatorColor),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    _buildButton('7', _buttonColor),
+                    _buildButton('8', _buttonColor),
+                    _buildButton('9', _buttonColor),
+                    _buildButton('x', _operatorColor),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    _buildButton('4', _buttonColor),
+                    _buildButton('5', _buttonColor),
+                    _buildButton('6', _buttonColor),
+                    _buildButton('-', _operatorColor),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    _buildButton('1', _buttonColor),
+                    _buildButton('2', _buttonColor),
+                    _buildButton('3', _buttonColor),
+                    _buildButton('+', _operatorColor),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    _buildButton('0', _buttonColor, flex: 2), // Двойная ширина для 0
+                    _buildButton('.', _buttonColor),
+                    _buildButton('=', _operatorColor),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
